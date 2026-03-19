@@ -1,10 +1,8 @@
-// UPDATE THIS after deploying the backend to Vercel
-// It will look like: https://unhinged-go-api.vercel.app
 const API_BASE = 'https://unhinged-go-api.vercel.app';
 
 type Tool = 'cooked' | 'vibecheck' | 'hypeup' | 'ghostwriter';
 
-export async function generateAI(tool: Tool, input: string) {
+export async function generateAI(tool: Tool, input: any) {
   const response = await fetch(`${API_BASE}/api/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

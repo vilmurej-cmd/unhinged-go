@@ -31,7 +31,14 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "UNHINGED GO needs access to your photos so AI can roast them.",
+          "cameraPermission": "UNHINGED GO needs camera access so AI can roast your selfie."
+        }
+      ]
     ],
     "extra": {
       "eas": {
