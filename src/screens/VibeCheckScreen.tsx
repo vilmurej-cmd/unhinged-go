@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import GlassCard from '../components/GlassCard';
 import ActionButton from '../components/ActionButton';
 import LoadingOverlay from '../components/LoadingOverlay';
+import UsageBanner from '../components/UsageBanner';
 import { COLORS, FONT, SPACING } from '../constants/theme';
 import { MOOD_OPTIONS } from '../constants/questions';
 import { LOADING_MESSAGES } from '../constants/loading';
 import { generateAI } from '../utils/api';
+import { canUse, incrementUsage, getUsageCount, getRemainingUses } from '../utils/usage';
+import { buildVibeShareText, copyText } from '../utils/share';
 
 type Phase = 'input' | 'loading' | 'results';
 
@@ -30,21 +33,38 @@ export default function VibeCheckScreen({ navigation }: any) {
   const [selectedMood, setSelectedMood] = useState<number | null>(null);
   const [vibeText, setVibeText] = useState('');
   const [result, setResult] = useState<VibeResult | null>(null);
+  const [remaining, setRemaining] = useState(3);
+
+  useEffect(() => {
+    getUsageCount('vibecheck').then((c) => setRemaining(getRemainingUses(c)));
+  }, []);
 
   const handleCheck = async () => {
     if (selectedMood === null) return;
+    const allowed = await canUse('vibecheck');
+    if (!allowed) {
+      Alert.alert('Daily Limit Reached', 'UNHINGED GO Pro coming soon! Try again tomorrow.');
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     setPhase('loading');
     try {
       const mood = MOOD_OPTIONS[selectedMood];
       const input = `Mood: ${mood.emoji} ${mood.label}${vibeText ? `\nMore details: ${vibeText}` : ''}`;
       const data = await generateAI('vibecheck', input);
+      await incrementUsage('vibecheck');
+      setRemaining((r) => r - 1);
       setResult(data);
       setPhase('results');
     } catch {
       Alert.alert('Oops', 'AI generation failed. Try again!');
       setPhase('input');
     }
+  };
+
+  const handleShare = () => {
+    if (!result) return;
+    copyText(buildVibeShareText(result.vibeName, result.color, result.reading));
   };
 
   const handleRetry = () => {
@@ -76,7 +96,7 @@ export default function VibeCheckScreen({ navigation }: any) {
             <Text style={styles.affirmationText}>{result.affirmation}</Text>
           </GlassCard>
 
-          <ActionButton title="Share My Vibe 📤" color={COLORS.vibeCheck} onPress={() => {}} />
+          <ActionButton title="Share My Vibe 📤" color={COLORS.vibeCheck} onPress={handleShare} />
           <ActionButton title="Check Again" color={COLORS.vibeCheck} onPress={handleRetry} outline style={{ marginTop: SPACING.sm }} />
           <ActionButton title="← Back Home" color={COLORS.textSecondary} onPress={() => navigation.goBack()} outline style={{ marginTop: SPACING.sm }} />
         </ScrollView>
@@ -87,6 +107,7 @@ export default function VibeCheckScreen({ navigation }: any) {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container}>
+        <UsageBanner remaining={remaining} color={COLORS.vibeCheck} />
         <Text style={styles.title}>How are you feeling right now?</Text>
 
         <View style={styles.moods}>

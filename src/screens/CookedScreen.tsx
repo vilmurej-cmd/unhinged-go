@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import GlassCard from '../components/GlassCard';
 import ActionButton from '../components/ActionButton';
 import LoadingOverlay from '../components/LoadingOverlay';
+import UsageBanner from '../components/UsageBanner';
 import { COLORS, FONT, SPACING } from '../constants/theme';
 import { COOKED_QUESTIONS } from '../constants/questions';
 import { LOADING_MESSAGES } from '../constants/loading';
 import { generateAI } from '../utils/api';
+import { canUse, incrementUsage, getUsageCount, getRemainingUses } from '../utils/usage';
+import { buildCookedShareText, copyText } from '../utils/share';
 
 type Phase = 'questions' | 'loading' | 'results';
 
@@ -23,16 +26,27 @@ export default function CookedScreen({ navigation }: any) {
   const [questionIndex, setQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
   const [result, setResult] = useState<CookedResult | null>(null);
+  const [remaining, setRemaining] = useState(3);
 
-  const currentQuestion = COOKED_QUESTIONS[questionIndex];
+  useEffect(() => {
+    getUsageCount('cooked').then((c) => setRemaining(getRemainingUses(c)));
+  }, []);
 
   const fetchResult = async (allAnswers: string[]) => {
+    const allowed = await canUse('cooked');
+    if (!allowed) {
+      Alert.alert('Daily Limit Reached', 'UNHINGED GO Pro coming soon! Try again tomorrow.');
+      return;
+    }
+
     setPhase('loading');
     try {
       const input = COOKED_QUESTIONS.map((q, i) =>
         `Q: ${q.question}\nA: ${allAnswers[i]}`
       ).join('\n\n');
       const data = await generateAI('cooked', input);
+      await incrementUsage('cooked');
+      setRemaining((r) => r - 1);
       setResult(data);
       setPhase('results');
     } catch {
@@ -56,7 +70,8 @@ export default function CookedScreen({ navigation }: any) {
   };
 
   const handleShare = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (!result) return;
+    copyText(buildCookedShareText(result.score, result.roast));
   };
 
   const handleRetry = () => {
@@ -98,13 +113,14 @@ export default function CookedScreen({ navigation }: any) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
+        <UsageBanner remaining={remaining} color={COLORS.cooked} />
         <Text style={styles.progress}>
           {questionIndex + 1} / {COOKED_QUESTIONS.length}
         </Text>
-        <Text style={styles.question}>{currentQuestion.question}</Text>
+        <Text style={styles.question}>{COOKED_QUESTIONS[questionIndex].question}</Text>
 
         <View style={styles.options}>
-          {currentQuestion.options.map((option, i) => (
+          {COOKED_QUESTIONS[questionIndex].options.map((option, i) => (
             <TouchableOpacity
               key={i}
               style={styles.optionButton}

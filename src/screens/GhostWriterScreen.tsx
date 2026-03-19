@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import GlassCard from '../components/GlassCard';
 import ActionButton from '../components/ActionButton';
 import LoadingOverlay from '../components/LoadingOverlay';
+import UsageBanner from '../components/UsageBanner';
 import { COLORS, FONT, SPACING } from '../constants/theme';
 import { LOADING_MESSAGES } from '../constants/loading';
 import { generateAI } from '../utils/api';
+import { canUse, incrementUsage, getUsageCount, getRemainingUses } from '../utils/usage';
+import { copyText } from '../utils/share';
 
 type Phase = 'input' | 'loading' | 'results';
 
@@ -27,13 +30,25 @@ export default function GhostWriterScreen({ navigation }: any) {
   const [phase, setPhase] = useState<Phase>('input');
   const [message, setMessage] = useState('');
   const [result, setResult] = useState<GhostResult | null>(null);
+  const [remaining, setRemaining] = useState(3);
+
+  useEffect(() => {
+    getUsageCount('ghostwriter').then((c) => setRemaining(getRemainingUses(c)));
+  }, []);
 
   const handleGenerate = async () => {
     if (!message.trim()) return;
+    const allowed = await canUse('ghostwriter');
+    if (!allowed) {
+      Alert.alert('Daily Limit Reached', 'UNHINGED GO Pro coming soon! Try again tomorrow.');
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     setPhase('loading');
     try {
       const data = await generateAI('ghostwriter', message);
+      await incrementUsage('ghostwriter');
+      setRemaining((r) => r - 1);
       setResult(data);
       setPhase('results');
     } catch {
@@ -42,15 +57,17 @@ export default function GhostWriterScreen({ navigation }: any) {
     }
   };
 
-  const handleCopy = (text: string) => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    // Clipboard wired in Phase 4
-  };
-
   const handleRegenerate = async () => {
+    const allowed = await canUse('ghostwriter');
+    if (!allowed) {
+      Alert.alert('Daily Limit Reached', 'UNHINGED GO Pro coming soon! Try again tomorrow.');
+      return;
+    }
     setPhase('loading');
     try {
       const data = await generateAI('ghostwriter', message);
+      await incrementUsage('ghostwriter');
+      setRemaining((r) => r - 1);
       setResult(data);
       setPhase('results');
     } catch {
@@ -77,7 +94,7 @@ export default function GhostWriterScreen({ navigation }: any) {
                   {type.emoji} {type.label}
                 </Text>
                 <TouchableOpacity
-                  onPress={() => handleCopy(result[type.key])}
+                  onPress={() => copyText(result[type.key])}
                   style={[styles.copyButton, { borderColor: type.color }]}
                 >
                   <Text style={[styles.copyText, { color: type.color }]}>Copy</Text>
@@ -98,6 +115,7 @@ export default function GhostWriterScreen({ navigation }: any) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
+        <UsageBanner remaining={remaining} color={COLORS.ghostWriter} />
         <Text style={styles.emoji}>👻</Text>
         <Text style={styles.title}>Paste the message you received</Text>
 

@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import GlassCard from '../components/GlassCard';
 import ActionButton from '../components/ActionButton';
 import LoadingOverlay from '../components/LoadingOverlay';
+import UsageBanner from '../components/UsageBanner';
 import { COLORS, FONT, SPACING } from '../constants/theme';
 import { LOADING_MESSAGES } from '../constants/loading';
 import { generateAI } from '../utils/api';
+import { canUse, incrementUsage, getUsageCount, getRemainingUses } from '../utils/usage';
+import { buildHypeShareText, copyText } from '../utils/share';
 
 type Phase = 'input' | 'loading' | 'results';
 
@@ -19,19 +22,41 @@ export default function HypeUpScreen({ navigation }: any) {
   const [phase, setPhase] = useState<Phase>('input');
   const [input, setInput] = useState('');
   const [result, setResult] = useState<HypeResult | null>(null);
+  const [remaining, setRemaining] = useState(3);
+
+  useEffect(() => {
+    getUsageCount('hypeup').then((c) => setRemaining(getRemainingUses(c)));
+  }, []);
 
   const handleHype = async () => {
     if (!input.trim()) return;
+    const allowed = await canUse('hypeup');
+    if (!allowed) {
+      Alert.alert('Daily Limit Reached', 'UNHINGED GO Pro coming soon! Try again tomorrow.');
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     setPhase('loading');
     try {
       const data = await generateAI('hypeup', input);
+      await incrementUsage('hypeup');
+      setRemaining((r) => r - 1);
       setResult(data);
       setPhase('results');
     } catch {
       Alert.alert('Oops', 'AI generation failed. Try again!');
       setPhase('input');
     }
+  };
+
+  const handleCopy = () => {
+    if (!result) return;
+    copyText(result.speech);
+  };
+
+  const handleShare = () => {
+    if (!result) return;
+    copyText(buildHypeShareText(result.speech));
   };
 
   const handleRetry = () => {
@@ -56,9 +81,9 @@ export default function HypeUpScreen({ navigation }: any) {
           </GlassCard>
 
           <View style={styles.buttonRow}>
-            <ActionButton title="Copy 📋" color={COLORS.hypeUp} onPress={() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)} style={{ flex: 1 }} />
+            <ActionButton title="Copy 📋" color={COLORS.hypeUp} onPress={handleCopy} style={{ flex: 1 }} />
             <View style={{ width: SPACING.sm }} />
-            <ActionButton title="Share 📤" color={COLORS.hypeUp} onPress={() => {}} outline style={{ flex: 1 }} />
+            <ActionButton title="Share 📤" color={COLORS.hypeUp} onPress={handleShare} outline style={{ flex: 1 }} />
           </View>
 
           <ActionButton title="Hype Me Again" color={COLORS.hypeUp} onPress={handleRetry} outline style={{ marginTop: SPACING.sm, width: '100%' }} />
@@ -71,6 +96,7 @@ export default function HypeUpScreen({ navigation }: any) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
+        <UsageBanner remaining={remaining} color={COLORS.hypeUp} />
         <Text style={styles.emoji}>⚡</Text>
         <Text style={styles.title}>What do you need hype for?</Text>
 

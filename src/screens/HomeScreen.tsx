@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import GlassCard from '../components/GlassCard';
 import { COLORS, FONT, SPACING } from '../constants/theme';
@@ -40,6 +40,9 @@ export default function HomeScreen({ navigation }: any) {
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
+          <TouchableOpacity style={styles.settingsButton} onPress={() => navigation.navigate('Settings')}>
+            <Text style={styles.settingsIcon}>⚙️</Text>
+          </TouchableOpacity>
           <Text style={styles.title}>UNHINGED <Text style={styles.go}>GO</Text></Text>
           <Text style={styles.subtitle}>Pick your weapon</Text>
         </View>
@@ -78,6 +81,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: SPACING.xl,
     marginTop: SPACING.md,
+  },
+  settingsButton: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    padding: SPACING.xs,
+  },
+  settingsIcon: {
+    fontSize: 24,
   },
   title: {
     fontSize: FONT.xxl,
