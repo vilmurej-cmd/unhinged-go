@@ -5,7 +5,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { Audio } from 'expo-av';
 import GlassCard from '../components/GlassCard';
 import ActionButton from '../components/ActionButton';
 import AuraScanner from '../components/AuraScanner';
@@ -39,14 +38,9 @@ export default function VibeCheckScreen({ navigation }: any) {
   const [result, setResult] = useState<VibeResult | null>(null);
   const [remaining, setRemaining] = useState(3);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const soundRef = useRef<Audio.Sound | null>(null);
 
   useEffect(() => {
     getUsageCount('vibecheck').then((c) => setRemaining(getRemainingUses(c)));
-    return () => {
-      // Cleanup sound on unmount
-      soundRef.current?.unloadAsync();
-    };
   }, []);
 
   // Fade in results
@@ -56,28 +50,6 @@ export default function VibeCheckScreen({ navigation }: any) {
       Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }).start();
     }
   }, [phase]);
-
-  const playAmbient = async () => {
-    try {
-      await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
-      // Use a simple system approach — no external file needed
-      // The scanning animation itself provides the immersive feel
-    } catch {
-      // Audio is optional — don't break the experience
-    }
-  };
-
-  const stopAmbient = async () => {
-    try {
-      if (soundRef.current) {
-        await soundRef.current.stopAsync();
-        await soundRef.current.unloadAsync();
-        soundRef.current = null;
-      }
-    } catch {
-      // Ignore
-    }
-  };
 
   const handleCheck = async () => {
     if (selectedMood === null) return;
@@ -89,7 +61,6 @@ export default function VibeCheckScreen({ navigation }: any) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     Keyboard.dismiss();
     setPhase('scanning');
-    await playAmbient();
 
     try {
       const mood = MOOD_OPTIONS[selectedMood];
@@ -100,12 +71,10 @@ export default function VibeCheckScreen({ navigation }: any) {
       setResult(data);
       // Show scanner for minimum 3 seconds
       setTimeout(() => {
-        stopAmbient();
         setPhase('results');
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }, 3000);
     } catch {
-      stopAmbient();
       Alert.alert('Oops', 'AI generation failed. Try again!');
       setPhase('input');
     }
