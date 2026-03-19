@@ -62,6 +62,8 @@ export default function VibeCheckScreen({ navigation }: any) {
     Keyboard.dismiss();
     setPhase('scanning');
 
+    const scanStart = Date.now();
+
     try {
       const mood = MOOD_OPTIONS[selectedMood];
       const input = `Mood: ${mood.emoji} ${mood.label}${vibeText ? `\nMore details: ${vibeText}` : ''}`;
@@ -69,11 +71,13 @@ export default function VibeCheckScreen({ navigation }: any) {
       await incrementUsage('vibecheck');
       setRemaining((r) => r - 1);
       setResult(data);
-      // Show scanner for minimum 3 seconds
+      // Show scanner for minimum 3 seconds total
+      const elapsed = Date.now() - scanStart;
+      const delay = Math.max(0, 3000 - elapsed);
       setTimeout(() => {
         setPhase('results');
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }, 3000);
+      }, delay);
     } catch {
       Alert.alert('Oops', 'AI generation failed. Try again!');
       setPhase('input');

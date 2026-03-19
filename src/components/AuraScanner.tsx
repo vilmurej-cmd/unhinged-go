@@ -1,10 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View, Animated, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, Animated } from 'react-native';
 import { COLORS, FONT, SPACING } from '../constants/theme';
-
-const { width } = Dimensions.get('window');
-const CIRCLE_COUNT = 4;
-const SCAN_COLORS = ['#8B5CF6', '#3B82F6', '#22C55E', '#D97706', '#EC4899', '#8B5CF6'];
 
 const MESSAGES = [
   "Scanning your energy field...",
@@ -13,66 +9,73 @@ const MESSAGES = [
   "Almost there... your aura is strong...",
 ];
 
+const AURA_COLOR = COLORS.vibeCheck;
+
 export default function AuraScanner() {
-  const animations = useRef(
-    Array.from({ length: CIRCLE_COUNT }, () => new Animated.Value(0))
-  ).current;
-  const colorAnim = useRef(new Animated.Value(0)).current;
+  const pulse1 = useRef(new Animated.Value(0.4)).current;
+  const pulse2 = useRef(new Animated.Value(0.3)).current;
+  const pulse3 = useRef(new Animated.Value(0.2)).current;
+  const dotScale = useRef(new Animated.Value(1)).current;
   const [messageIndex, setMessageIndex] = useState(0);
+  const msgFade = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // Pulsing circles — staggered
-    animations.forEach((anim, i) => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.delay(i * 400),
-          Animated.timing(anim, { toValue: 1, duration: 2000, useNativeDriver: true }),
-          Animated.timing(anim, { toValue: 0, duration: 0, useNativeDriver: true }),
-        ])
-      ).start();
-    });
-
-    // Color cycling
+    // Outer ring pulse
     Animated.loop(
-      Animated.timing(colorAnim, { toValue: SCAN_COLORS.length - 1, duration: 4000, useNativeDriver: false })
+      Animated.sequence([
+        Animated.timing(pulse1, { toValue: 0.7, duration: 1500, useNativeDriver: true }),
+        Animated.timing(pulse1, { toValue: 0.2, duration: 1500, useNativeDriver: true }),
+      ])
     ).start();
 
-    // Rotating messages
+    // Middle ring pulse (offset)
+    Animated.loop(
+      Animated.sequence([
+        Animated.delay(300),
+        Animated.timing(pulse2, { toValue: 0.6, duration: 1400, useNativeDriver: true }),
+        Animated.timing(pulse2, { toValue: 0.15, duration: 1400, useNativeDriver: true }),
+      ])
+    ).start();
+
+    // Inner ring pulse (offset more)
+    Animated.loop(
+      Animated.sequence([
+        Animated.delay(600),
+        Animated.timing(pulse3, { toValue: 0.5, duration: 1300, useNativeDriver: true }),
+        Animated.timing(pulse3, { toValue: 0.1, duration: 1300, useNativeDriver: true }),
+      ])
+    ).start();
+
+    // Center dot breathing
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(dotScale, { toValue: 1.2, duration: 1000, useNativeDriver: true }),
+        Animated.timing(dotScale, { toValue: 0.9, duration: 1000, useNativeDriver: true }),
+      ])
+    ).start();
+
+    // Rotating messages with fade
     const msgInterval = setInterval(() => {
-      setMessageIndex((i) => (i + 1) % MESSAGES.length);
-    }, 1500);
+      Animated.timing(msgFade, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
+        setMessageIndex((i) => (i + 1) % MESSAGES.length);
+        Animated.timing(msgFade, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+      });
+    }, 1800);
 
     return () => clearInterval(msgInterval);
   }, []);
 
-  const interpolatedColor = colorAnim.interpolate({
-    inputRange: SCAN_COLORS.map((_, i) => i),
-    outputRange: SCAN_COLORS,
-  });
-
   return (
     <View style={styles.container}>
       <View style={styles.circleWrap}>
-        {animations.map((anim, i) => {
-          const scale = anim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 2 + i * 0.5] });
-          const opacity = anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.6, 0.3, 0] });
-          return (
-            <Animated.View
-              key={i}
-              style={[
-                styles.circle,
-                {
-                  backgroundColor: interpolatedColor as any,
-                  transform: [{ scale }],
-                  opacity,
-                },
-              ]}
-            />
-          );
-        })}
-        <Animated.View style={[styles.centerDot, { backgroundColor: interpolatedColor as any }]} />
+        <Animated.View style={[styles.ring, styles.ringOuter, { opacity: pulse1 }]} />
+        <Animated.View style={[styles.ring, styles.ringMiddle, { opacity: pulse2 }]} />
+        <Animated.View style={[styles.ring, styles.ringInner, { opacity: pulse3 }]} />
+        <Animated.View style={[styles.centerDot, { transform: [{ scale: dotScale }] }]} />
       </View>
-      <Text style={styles.message}>{MESSAGES[messageIndex]}</Text>
+      <Animated.Text style={[styles.message, { opacity: msgFade }]}>
+        {MESSAGES[messageIndex]}
+      </Animated.Text>
     </View>
   );
 }
@@ -85,27 +88,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   circleWrap: {
-    width: 200,
-    height: 200,
+    width: 220,
+    height: 220,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  circle: {
+  ring: {
     position: 'absolute',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    borderRadius: 999,
+    borderWidth: 2,
+    borderColor: AURA_COLOR,
+  },
+  ringOuter: {
+    width: 200,
+    height: 200,
+  },
+  ringMiddle: {
+    width: 140,
+    height: 140,
+  },
+  ringInner: {
+    width: 80,
+    height: 80,
   },
   centerDot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: AURA_COLOR,
+    shadowColor: AURA_COLOR,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 16,
   },
   message: {
-    color: COLORS.vibeCheck,
+    color: AURA_COLOR,
     fontSize: FONT.md,
     fontWeight: '700',
     textAlign: 'center',
     marginTop: SPACING.xxl,
+    paddingHorizontal: SPACING.lg,
   },
 });
