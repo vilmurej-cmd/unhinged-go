@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import GlassCard from '../components/GlassCard';
@@ -95,38 +95,42 @@ export default function HypeUpScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.container}>
-        <UsageBanner remaining={remaining} color={COLORS.hypeUp} />
-        <Text style={styles.emoji}>⚡</Text>
-        <Text style={styles.title}>What do you need hype for?</Text>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+            <UsageBanner remaining={remaining} color={COLORS.hypeUp} />
+            <Text style={styles.emoji}>⚡</Text>
+            <Text style={styles.title}>What do you need hype for?</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="job interview, first date, gym session, presentation..."
-          placeholderTextColor={COLORS.textSecondary}
-          value={input}
-          onChangeText={setInput}
-          multiline
-          maxLength={300}
-        />
+            <TextInput
+              style={styles.input}
+              placeholder="job interview, first date, gym session, presentation..."
+              placeholderTextColor={COLORS.textSecondary}
+              value={input}
+              onChangeText={setInput}
+              multiline
+              maxLength={300}
+            />
 
-        <ActionButton
-          title="HYPE ME 🔥"
-          color={input.trim() ? COLORS.hypeUp : COLORS.surfaceLight}
-          onPress={handleHype}
-        />
+            <ActionButton
+              title="HYPE ME 🔥"
+              color={input.trim() ? COLORS.hypeUp : COLORS.surfaceLight}
+              onPress={handleHype}
+            />
 
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-      </View>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
+              <Text style={styles.backText}>← Back</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.background },
-  container: { flex: 1, padding: SPACING.lg, justifyContent: 'center' },
+  container: { flexGrow: 1, padding: SPACING.lg, justifyContent: 'center' },
   emoji: { fontSize: 64, textAlign: 'center', marginBottom: SPACING.md },
   title: { color: COLORS.text, fontSize: FONT.xl, fontWeight: '800', textAlign: 'center', marginBottom: SPACING.xl },
   input: {

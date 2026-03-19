@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import GlassCard from '../components/GlassCard';
@@ -106,43 +106,47 @@ export default function VibeCheckScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <UsageBanner remaining={remaining} color={COLORS.vibeCheck} />
-        <Text style={styles.title}>How are you feeling right now?</Text>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+            <UsageBanner remaining={remaining} color={COLORS.vibeCheck} />
+            <Text style={styles.title}>How are you feeling right now?</Text>
 
-        <View style={styles.moods}>
-          {MOOD_OPTIONS.map((mood, i) => (
-            <TouchableOpacity
-              key={i}
-              onPress={() => { setSelectedMood(i); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-              style={[styles.moodButton, selectedMood === i && styles.moodSelected]}
-            >
-              <Text style={styles.moodEmoji}>{mood.emoji}</Text>
-              <Text style={[styles.moodLabel, selectedMood === i && { color: COLORS.vibeCheck }]}>{mood.label}</Text>
+            <View style={styles.moods}>
+              {MOOD_OPTIONS.map((mood, i) => (
+                <TouchableOpacity
+                  key={i}
+                  onPress={() => { setSelectedMood(i); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                  style={[styles.moodButton, selectedMood === i && styles.moodSelected]}
+                >
+                  <Text style={styles.moodEmoji}>{mood.emoji}</Text>
+                  <Text style={[styles.moodLabel, selectedMood === i && { color: COLORS.vibeCheck }]}>{mood.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Tell me more about your vibe today..."
+              placeholderTextColor={COLORS.textSecondary}
+              value={vibeText}
+              onChangeText={setVibeText}
+              multiline
+              maxLength={300}
+            />
+
+            <ActionButton
+              title="CHECK MY VIBE 🔮"
+              color={selectedMood !== null ? COLORS.vibeCheck : COLORS.surfaceLight}
+              onPress={handleCheck}
+            />
+
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
+              <Text style={styles.backText}>← Back</Text>
             </TouchableOpacity>
-          ))}
-        </View>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Tell me more about your vibe today..."
-          placeholderTextColor={COLORS.textSecondary}
-          value={vibeText}
-          onChangeText={setVibeText}
-          multiline
-          maxLength={300}
-        />
-
-        <ActionButton
-          title="CHECK MY VIBE 🔮"
-          color={selectedMood !== null ? COLORS.vibeCheck : COLORS.surfaceLight}
-          onPress={handleCheck}
-        />
-
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-      </ScrollView>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

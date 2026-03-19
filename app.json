@@ -13,7 +13,10 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.vilmureventures.unhingedgo"
+      "bundleIdentifier": "com.vilmureventures.unhingedgo",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -29,6 +32,12 @@
     },
     "plugins": [
       "expo-sharing"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "673f3d9e-7093-4eca-8ccc-857fcbabe6db"
+      }
+    },
+    "owner": "ezrejoshv"
   }
 }
