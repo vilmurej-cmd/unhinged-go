@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import GlassCard from '../components/GlassCard';
@@ -7,14 +7,15 @@ import ActionButton from '../components/ActionButton';
 import LoadingOverlay from '../components/LoadingOverlay';
 import { COLORS, FONT, SPACING } from '../constants/theme';
 import { LOADING_MESSAGES } from '../constants/loading';
+import { generateAI } from '../utils/api';
 
 type Phase = 'input' | 'loading' | 'results';
 
-const MOCK_RESULT = {
-  nice: "Hey! Thanks for reaching out 😊 I appreciate you letting me know. Let me think about it and I'll get back to you soon!",
-  savage: "lol that's crazy. anyway, I'm booked and busy but thanks for thinking of me I guess 💅",
-  unhinged: "I just showed this to my therapist and she started crying. Then she showed it to HER therapist. We're all in a group chat now discussing this. You've united the mental health community. Congratulations. 🏆",
-};
+interface GhostResult {
+  nice: string;
+  savage: string;
+  unhinged: string;
+}
 
 const REPLY_TYPES = [
   { key: 'nice' as const, label: 'NICE', color: COLORS.nice, emoji: '😇' },
@@ -25,29 +26,44 @@ const REPLY_TYPES = [
 export default function GhostWriterScreen({ navigation }: any) {
   const [phase, setPhase] = useState<Phase>('input');
   const [message, setMessage] = useState('');
+  const [result, setResult] = useState<GhostResult | null>(null);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!message.trim()) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     setPhase('loading');
-    setTimeout(() => setPhase('results'), 3000);
+    try {
+      const data = await generateAI('ghostwriter', message);
+      setResult(data);
+      setPhase('results');
+    } catch {
+      Alert.alert('Oops', 'AI generation failed. Try again!');
+      setPhase('input');
+    }
   };
 
   const handleCopy = (text: string) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    // Will wire up clipboard in Phase 4
+    // Clipboard wired in Phase 4
   };
 
-  const handleRetry = () => {
+  const handleRegenerate = async () => {
     setPhase('loading');
-    setTimeout(() => setPhase('results'), 3000);
+    try {
+      const data = await generateAI('ghostwriter', message);
+      setResult(data);
+      setPhase('results');
+    } catch {
+      Alert.alert('Oops', 'AI generation failed. Try again!');
+      setPhase('results');
+    }
   };
 
   if (phase === 'loading') {
     return <LoadingOverlay messages={LOADING_MESSAGES.ghostWriter} color={COLORS.ghostWriter} />;
   }
 
-  if (phase === 'results') {
+  if (phase === 'results' && result) {
     return (
       <SafeAreaView style={styles.safe}>
         <ScrollView contentContainerStyle={styles.results}>
@@ -61,18 +77,18 @@ export default function GhostWriterScreen({ navigation }: any) {
                   {type.emoji} {type.label}
                 </Text>
                 <TouchableOpacity
-                  onPress={() => handleCopy(MOCK_RESULT[type.key])}
+                  onPress={() => handleCopy(result[type.key])}
                   style={[styles.copyButton, { borderColor: type.color }]}
                 >
                   <Text style={[styles.copyText, { color: type.color }]}>Copy</Text>
                 </TouchableOpacity>
               </View>
-              <Text style={styles.replyText}>{MOCK_RESULT[type.key]}</Text>
+              <Text style={styles.replyText}>{result[type.key]}</Text>
             </GlassCard>
           ))}
 
-          <ActionButton title="Regenerate 🔄" color={COLORS.ghostWriter} onPress={handleRetry} style={{ width: '100%' }} />
-          <ActionButton title="New Message" color={COLORS.ghostWriter} onPress={() => { setPhase('input'); setMessage(''); }} outline style={{ marginTop: SPACING.sm, width: '100%' }} />
+          <ActionButton title="Regenerate 🔄" color={COLORS.ghostWriter} onPress={handleRegenerate} style={{ width: '100%' }} />
+          <ActionButton title="New Message" color={COLORS.ghostWriter} onPress={() => { setPhase('input'); setMessage(''); setResult(null); }} outline style={{ marginTop: SPACING.sm, width: '100%' }} />
           <ActionButton title="← Back Home" color={COLORS.textSecondary} onPress={() => navigation.goBack()} outline style={{ marginTop: SPACING.sm, width: '100%' }} />
         </ScrollView>
       </SafeAreaView>

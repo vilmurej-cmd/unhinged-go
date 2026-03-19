@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import GlassCard from '../components/GlassCard';
@@ -8,6 +8,7 @@ import LoadingOverlay from '../components/LoadingOverlay';
 import { COLORS, FONT, SPACING } from '../constants/theme';
 import { MOOD_OPTIONS } from '../constants/questions';
 import { LOADING_MESSAGES } from '../constants/loading';
+import { generateAI } from '../utils/api';
 
 type Phase = 'input' | 'loading' | 'results';
 
@@ -17,52 +18,62 @@ const AURA_COLORS: Record<string, string> = {
   black: '#1F2937', gold: '#D97706',
 };
 
-// Mock result
-const MOCK_RESULT = {
-  color: 'purple',
-  vibeName: 'Chaotic Academic Energy',
-  reading: "You've got that 'three tabs of research open at 2am' energy. Your brain is running at full speed but your body forgot to get the memo. The universe sees your grind — it just wishes you'd drink some water.",
-  affirmation: "Your chaos is your superpower. Channel it, don't fight it.",
-};
+interface VibeResult {
+  color: string;
+  vibeName: string;
+  reading: string;
+  affirmation: string;
+}
 
 export default function VibeCheckScreen({ navigation }: any) {
   const [phase, setPhase] = useState<Phase>('input');
   const [selectedMood, setSelectedMood] = useState<number | null>(null);
   const [vibeText, setVibeText] = useState('');
+  const [result, setResult] = useState<VibeResult | null>(null);
 
-  const handleCheck = () => {
+  const handleCheck = async () => {
     if (selectedMood === null) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     setPhase('loading');
-    setTimeout(() => setPhase('results'), 3000);
+    try {
+      const mood = MOOD_OPTIONS[selectedMood];
+      const input = `Mood: ${mood.emoji} ${mood.label}${vibeText ? `\nMore details: ${vibeText}` : ''}`;
+      const data = await generateAI('vibecheck', input);
+      setResult(data);
+      setPhase('results');
+    } catch {
+      Alert.alert('Oops', 'AI generation failed. Try again!');
+      setPhase('input');
+    }
   };
 
   const handleRetry = () => {
     setPhase('input');
     setSelectedMood(null);
     setVibeText('');
+    setResult(null);
   };
 
   if (phase === 'loading') {
     return <LoadingOverlay messages={LOADING_MESSAGES.vibeCheck} color={COLORS.vibeCheck} />;
   }
 
-  if (phase === 'results') {
-    const auraHex = AURA_COLORS[MOCK_RESULT.color] || COLORS.vibeCheck;
+  if (phase === 'results' && result) {
+    const auraHex = AURA_COLORS[result.color] || COLORS.vibeCheck;
     return (
       <SafeAreaView style={styles.safe}>
         <ScrollView contentContainerStyle={styles.results}>
           <View style={[styles.auraCircle, { backgroundColor: auraHex, shadowColor: auraHex }]} />
-          <Text style={[styles.vibeName, { color: auraHex }]}>{MOCK_RESULT.vibeName}</Text>
-          <Text style={styles.auraLabel}>{MOCK_RESULT.color.toUpperCase()} AURA</Text>
+          <Text style={[styles.vibeName, { color: auraHex }]}>{result.vibeName}</Text>
+          <Text style={styles.auraLabel}>{result.color.toUpperCase()} AURA</Text>
 
           <GlassCard accentColor={auraHex} style={styles.readingCard}>
-            <Text style={styles.readingText}>{MOCK_RESULT.reading}</Text>
+            <Text style={styles.readingText}>{result.reading}</Text>
           </GlassCard>
 
           <GlassCard style={styles.affirmationCard}>
             <Text style={styles.affirmationLabel}>✨ Daily Affirmation</Text>
-            <Text style={styles.affirmationText}>{MOCK_RESULT.affirmation}</Text>
+            <Text style={styles.affirmationText}>{result.affirmation}</Text>
           </GlassCard>
 
           <ActionButton title="Share My Vibe 📤" color={COLORS.vibeCheck} onPress={() => {}} />

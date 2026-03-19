@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import GlassCard from '../components/GlassCard';
@@ -8,22 +8,40 @@ import LoadingOverlay from '../components/LoadingOverlay';
 import { COLORS, FONT, SPACING } from '../constants/theme';
 import { COOKED_QUESTIONS } from '../constants/questions';
 import { LOADING_MESSAGES } from '../constants/loading';
+import { generateAI } from '../utils/api';
 
 type Phase = 'questions' | 'loading' | 'results';
 
-// Mock result — will be replaced with AI in Phase 3
-const MOCK_RESULT = {
-  score: 7,
-  roast: "Your gym membership is essentially a charitable donation at this point. Your screen time could qualify as a part-time job, and your inbox is basically a digital hoarder's paradise. But hey, at least your relationship status isn't 'it's complicated' — oh wait. 💀",
-  advice: "Start with just ONE unread email a day. Baby steps, champ.",
-};
+interface CookedResult {
+  score: number;
+  roast: string;
+  advice: string;
+}
 
 export default function CookedScreen({ navigation }: any) {
   const [phase, setPhase] = useState<Phase>('questions');
   const [questionIndex, setQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
+  const [result, setResult] = useState<CookedResult | null>(null);
 
   const currentQuestion = COOKED_QUESTIONS[questionIndex];
+
+  const fetchResult = async (allAnswers: string[]) => {
+    setPhase('loading');
+    try {
+      const input = COOKED_QUESTIONS.map((q, i) =>
+        `Q: ${q.question}\nA: ${allAnswers[i]}`
+      ).join('\n\n');
+      const data = await generateAI('cooked', input);
+      setResult(data);
+      setPhase('results');
+    } catch {
+      Alert.alert('Oops', 'AI generation failed. Try again!');
+      setPhase('questions');
+      setQuestionIndex(0);
+      setAnswers([]);
+    }
+  };
 
   const selectAnswer = (answer: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -33,42 +51,40 @@ export default function CookedScreen({ navigation }: any) {
     if (questionIndex < COOKED_QUESTIONS.length - 1) {
       setQuestionIndex(questionIndex + 1);
     } else {
-      setPhase('loading');
-      // Simulate AI call — replaced in Phase 3
-      setTimeout(() => setPhase('results'), 3000);
+      fetchResult(newAnswers);
     }
   };
 
   const handleShare = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    // Will wire up sharing in Phase 4
   };
 
   const handleRetry = () => {
     setPhase('questions');
     setQuestionIndex(0);
     setAnswers([]);
+    setResult(null);
   };
 
   if (phase === 'loading') {
     return <LoadingOverlay messages={LOADING_MESSAGES.cooked} color={COLORS.cooked} />;
   }
 
-  if (phase === 'results') {
+  if (phase === 'results' && result) {
     return (
       <SafeAreaView style={styles.safe}>
         <ScrollView contentContainerStyle={styles.results}>
           <Text style={styles.resultLabel}>YOUR COOKED SCORE</Text>
-          <Text style={styles.score}>{MOCK_RESULT.score}</Text>
+          <Text style={styles.score}>{result.score}</Text>
           <Text style={styles.scoreSubtext}>out of 10 🔥</Text>
 
           <GlassCard accentColor={COLORS.cooked} style={styles.roastCard}>
-            <Text style={styles.roastText}>{MOCK_RESULT.roast}</Text>
+            <Text style={styles.roastText}>{result.roast}</Text>
           </GlassCard>
 
           <GlassCard style={styles.adviceCard}>
             <Text style={styles.adviceLabel}>💡 Real talk:</Text>
-            <Text style={styles.adviceText}>{MOCK_RESULT.advice}</Text>
+            <Text style={styles.adviceText}>{result.advice}</Text>
           </GlassCard>
 
           <ActionButton title="Share My Score 📤" color={COLORS.cooked} onPress={handleShare} />

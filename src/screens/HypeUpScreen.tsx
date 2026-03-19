@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import GlassCard from '../components/GlassCard';
@@ -7,34 +7,44 @@ import ActionButton from '../components/ActionButton';
 import LoadingOverlay from '../components/LoadingOverlay';
 import { COLORS, FONT, SPACING } from '../constants/theme';
 import { LOADING_MESSAGES } from '../constants/loading';
+import { generateAI } from '../utils/api';
 
 type Phase = 'input' | 'loading' | 'results';
 
-const MOCK_RESULT = {
-  speech: "Listen to me RIGHT NOW. You are about to walk into that job interview and absolutely DOMINATE. They don't even know what's about to hit them. You've got the skills, you've got the confidence, and you've got that unshakable energy that makes people sit up and pay attention. When you walk through those doors, the whole room is going to feel it. They're not interviewing you — you're interviewing THEM. Now go in there and show them why they'd be lucky to have you. THIS IS YOUR MOMENT. 🔥",
-};
+interface HypeResult {
+  speech: string;
+}
 
 export default function HypeUpScreen({ navigation }: any) {
   const [phase, setPhase] = useState<Phase>('input');
   const [input, setInput] = useState('');
+  const [result, setResult] = useState<HypeResult | null>(null);
 
-  const handleHype = () => {
+  const handleHype = async () => {
     if (!input.trim()) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     setPhase('loading');
-    setTimeout(() => setPhase('results'), 3000);
+    try {
+      const data = await generateAI('hypeup', input);
+      setResult(data);
+      setPhase('results');
+    } catch {
+      Alert.alert('Oops', 'AI generation failed. Try again!');
+      setPhase('input');
+    }
   };
 
   const handleRetry = () => {
     setPhase('input');
     setInput('');
+    setResult(null);
   };
 
   if (phase === 'loading') {
     return <LoadingOverlay messages={LOADING_MESSAGES.hypeUp} color={COLORS.hypeUp} />;
   }
 
-  if (phase === 'results') {
+  if (phase === 'results' && result) {
     return (
       <SafeAreaView style={styles.safe}>
         <ScrollView contentContainerStyle={styles.results}>
@@ -42,7 +52,7 @@ export default function HypeUpScreen({ navigation }: any) {
           <Text style={styles.resultLabel}>YOUR HYPE SPEECH</Text>
 
           <GlassCard accentColor={COLORS.hypeUp} style={styles.speechCard}>
-            <Text style={styles.speechText}>{MOCK_RESULT.speech}</Text>
+            <Text style={styles.speechText}>{result.speech}</Text>
           </GlassCard>
 
           <View style={styles.buttonRow}>
