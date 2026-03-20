@@ -1,13 +1,15 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Linking } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Linking, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONT, SPACING } from '../constants/theme';
 
+const PRIVACY_URL = 'https://unhinged-go-privacy.vercel.app';
+
 const MENU_ITEMS = [
-  { label: 'Rate UNHINGED GO ⭐', action: () => {} },
-  { label: 'Share with Friends 📤', action: () => {} },
-  { label: 'Privacy Policy', action: () => {} },
+  { label: 'Rate UNHINGED GO ⭐', action: () => Linking.openURL('https://apps.apple.com/app/id6744105219') },
+  { label: 'Share with Friends 📤', action: () => Share.share({ message: 'Check out UNHINGED GO — AI with no filter! 🔥' }) },
+  { label: 'Privacy Policy', action: () => Linking.openURL(PRIVACY_URL) },
   { label: 'Restore Purchases', action: () => {} },
 ];
 
