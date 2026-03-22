@@ -6,6 +6,7 @@ import CookedScreen from '../screens/CookedScreen';
 import VibeCheckScreen from '../screens/VibeCheckScreen';
 import HypeUpScreen from '../screens/HypeUpScreen';
 import GhostWriterScreen from '../screens/GhostWriterScreen';
+import RoastMyFriendScreen from '../screens/RoastMyFriendScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 
 const Stack = createStackNavigator();
@@ -26,6 +27,7 @@ export default function AppNavigator() {
       <Stack.Screen name="VibeCheck" component={VibeCheckScreen} />
       <Stack.Screen name="HypeUp" component={HypeUpScreen} />
       <Stack.Screen name="GhostWriter" component={GhostWriterScreen} />
+      <Stack.Screen name="RoastMyFriend" component={RoastMyFriendScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
     </Stack.Navigator>
   );

@@ -33,7 +33,24 @@ const TOOLS = [
     color: COLORS.ghostWriter,
     screen: 'GhostWriter',
   },
+  {
+    name: 'Roast My Friend',
+    emoji: '🍗',
+    tagline: 'Playful roasts on demand',
+    color: COLORS.cooked,
+    screen: 'RoastMyFriend',
+  },
 ];
+
+const DAILY_ROASTS: Record<number, string> = {
+  0: "Sunday? More like Sun-die on the couch doing absolutely nothing productive. At least you're consistent.",
+  1: "Monday hit you like a truck and you didn't even have the decency to dodge. Respect the commitment to suffering.",
+  2: "It's Tuesday. Nobody has ever been excited about Tuesday. You're both mid.",
+  3: "Wednesday: the day where you're too far from last weekend and too far from the next one. You're stuck in the void.",
+  4: "Thursday is just Friday's annoying little sibling that shows up uninvited to every party.",
+  5: "TGIF? More like Thank God I Faked my way through another week. Legend.",
+  6: "Saturday you: plans to be productive. Also Saturday you: watched 6 hours of content and called it self-care.",
+};
 
 export default function HomeScreen({ navigation }: any) {
   return (
@@ -46,6 +63,12 @@ export default function HomeScreen({ navigation }: any) {
           <Text style={styles.title}>UNHINGED <Text style={styles.go}>GO</Text></Text>
           <Text style={styles.subtitle}>Pick your weapon</Text>
         </View>
+
+        {/* Daily Roast */}
+        <GlassCard accentColor={COLORS.cooked} style={styles.dailyRoastCard}>
+          <Text style={styles.dailyRoastLabel}>🔥 DAILY ROAST</Text>
+          <Text style={styles.dailyRoastText}>{DAILY_ROASTS[new Date().getDay()]}</Text>
+        </GlassCard>
 
         <View style={styles.grid}>
           {TOOLS.map((tool) => (
@@ -132,5 +155,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: SPACING.xl,
     opacity: 0.5,
+  },
+  dailyRoastCard: {
+    marginBottom: SPACING.lg,
+  },
+  dailyRoastLabel: {
+    fontSize: FONT.sm,
+    fontWeight: '800',
+    color: COLORS.cooked,
+    letterSpacing: 2,
+    marginBottom: SPACING.sm,
+  },
+  dailyRoastText: {
+    fontSize: FONT.md,
+    color: COLORS.text,
+    lineHeight: 24,
   },
 });
