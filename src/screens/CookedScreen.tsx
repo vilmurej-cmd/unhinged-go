@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Alert,
   KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback, Platform, Image,
+  Dimensions, Modal,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -40,6 +42,10 @@ function getScoreColor(score: number): string {
   return '#DC2626';
 }
 
+const CONSENT_KEY = 'photo_ai_consent_accepted';
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const PHOTO_SIZE = Math.min(SCREEN_WIDTH * 0.6, 350);
+
 export default function CookedScreen({ navigation }: any) {
   const [phase, setPhase] = useState<Phase>('modeSelect');
   const [textDump, setTextDump] = useState('');
@@ -48,9 +54,12 @@ export default function CookedScreen({ navigation }: any) {
   const [result, setResult] = useState<CookedResult | null>(null);
   const [remaining, setRemaining] = useState(3);
   const [encourageIndex, setEncourageIndex] = useState(0);
+  const [showConsent, setShowConsent] = useState(false);
+  const [consentAccepted, setConsentAccepted] = useState(false);
 
   useEffect(() => {
     getUsageCount('cooked').then((c) => setRemaining(getRemainingUses(c)));
+    AsyncStorage.getItem(CONSENT_KEY).then((v) => setConsentAccepted(v === 'true'));
   }, []);
 
   useEffect(() => {
@@ -114,6 +123,23 @@ export default function CookedScreen({ navigation }: any) {
   };
 
   const handlePhotoRoast = async () => {
+    if (!photoBase64) return;
+    // Check consent before sending photo to OpenAI
+    if (!consentAccepted) {
+      setShowConsent(true);
+      return;
+    }
+    await sendPhotoToAI();
+  };
+
+  const handleConsentAccept = async () => {
+    await AsyncStorage.setItem(CONSENT_KEY, 'true');
+    setConsentAccepted(true);
+    setShowConsent(false);
+    await sendPhotoToAI();
+  };
+
+  const sendPhotoToAI = async () => {
     if (!photoBase64) return;
     const allowed = await canUse('cooked');
     if (!allowed) {
@@ -188,7 +214,7 @@ export default function CookedScreen({ navigation }: any) {
 
           {photoUri ? (
             <View style={styles.photoPreviewWrap}>
-              <Image source={{ uri: photoUri }} style={styles.photoPreview} />
+              <Image source={{ uri: photoUri }} style={[styles.photoPreview, { width: PHOTO_SIZE, height: PHOTO_SIZE }]} />
               <TouchableOpacity onPress={() => { setPhotoUri(null); setPhotoBase64(null); }} style={styles.changePhoto}>
                 <Text style={styles.changePhotoText}>Change Photo</Text>
               </TouchableOpacity>
@@ -214,6 +240,25 @@ export default function CookedScreen({ navigation }: any) {
             <Text style={styles.backText}>← Back</Text>
           </TouchableOpacity>
         </ScrollView>
+
+        {/* Photo AI Consent Modal */}
+        <Modal visible={showConsent} transparent animationType="fade">
+          <View style={styles.consentOverlay}>
+            <View style={styles.consentModal}>
+              <Text style={styles.consentTitle}>Photo Data Disclosure</Text>
+              <Text style={styles.consentText}>
+                Your photo will be sent to OpenAI for AI-powered analysis. The photo may contain facial features or other personal data.
+              </Text>
+              <Text style={styles.consentText}>
+                OpenAI processes the image to generate your roast and does not store your photo permanently. By tapping "I Agree," you consent to sending this photo to OpenAI.
+              </Text>
+              <ActionButton title="I Agree" color={COLORS.cooked} onPress={handleConsentAccept} />
+              <TouchableOpacity onPress={() => setShowConsent(false)} style={styles.consentCancel}>
+                <Text style={styles.consentCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     );
   }
@@ -337,7 +382,7 @@ const styles = StyleSheet.create({
   photoOptionEmoji: { fontSize: 48, marginBottom: SPACING.sm },
   photoOptionLabel: { color: COLORS.text, fontSize: FONT.sm, fontWeight: '700' },
   photoPreviewWrap: { alignItems: 'center', marginTop: SPACING.lg },
-  photoPreview: { width: 250, height: 250, borderRadius: 20, borderWidth: 2, borderColor: COLORS.cooked },
+  photoPreview: { borderRadius: 20, borderWidth: 2, borderColor: COLORS.cooked },
   changePhoto: { marginTop: SPACING.sm },
   changePhotoText: { color: COLORS.cooked, fontSize: FONT.sm, fontWeight: '700' },
 
@@ -351,6 +396,14 @@ const styles = StyleSheet.create({
   adviceCard: { marginBottom: SPACING.xl, width: '100%' },
   adviceLabel: { color: COLORS.hypeUp, fontSize: FONT.sm, fontWeight: '700', marginBottom: SPACING.xs },
   adviceText: { color: COLORS.textSecondary, fontSize: FONT.md, lineHeight: 24 },
+
+  // Consent Modal
+  consentOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: SPACING.lg },
+  consentModal: { backgroundColor: COLORS.surface, borderRadius: 20, padding: SPACING.xl, maxWidth: 400, width: '100%', borderWidth: 1, borderColor: COLORS.border },
+  consentTitle: { color: COLORS.text, fontSize: FONT.xl, fontWeight: '900', textAlign: 'center', marginBottom: SPACING.md },
+  consentText: { color: COLORS.textSecondary, fontSize: FONT.sm, lineHeight: 22, marginBottom: SPACING.md, textAlign: 'center' },
+  consentCancel: { marginTop: SPACING.md, alignItems: 'center' },
+  consentCancelText: { color: COLORS.textSecondary, fontSize: FONT.sm, fontWeight: '600' },
 
   // Shared
   back: { marginTop: SPACING.xl, alignItems: 'center' },

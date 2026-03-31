@@ -12,10 +12,12 @@
       "backgroundColor": "#0A0A0F"
     },
     "ios": {
-      "supportsTablet": false,
+      "supportsTablet": true,
       "bundleIdentifier": "com.vilmureventures.unhingedgo",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "UNHINGED GO needs access to your photos, which may contain faces, to send them to OpenAI for AI-powered roast analysis.",
+        "NSCameraUsageDescription": "UNHINGED GO needs camera access to take selfies, which may contain faces, to send them to OpenAI for AI-powered roast analysis."
       }
     },
     "android": {
@@ -35,8 +37,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "UNHINGED GO needs access to your photos so AI can roast them.",
-          "cameraPermission": "UNHINGED GO needs camera access so AI can roast your selfie."
+          "photosPermission": "UNHINGED GO needs access to your photos, which may contain faces, to send them to OpenAI for AI-powered roast analysis.",
+          "cameraPermission": "UNHINGED GO needs camera access to take selfies, which may contain faces, to send them to OpenAI for AI-powered roast analysis."
         }
       ]
     ],
